@@ -19,6 +19,7 @@ require 'mittsu/renderers/opengl/opengl_light_renderer'
 require 'mittsu/renderers/opengl/opengl_default_target'
 require 'mittsu/renderers/opengl/opengl_buffer'
 require 'mittsu/renderers/opengl/plugins/shadow_map_plugin'
+require 'mittsu/renderers/opengl/plugins/sprite_plugin'
 require 'mittsu/renderers/shaders/shader_lib'
 require 'mittsu/renderers/shaders/uniforms_utils'
 
@@ -260,13 +261,6 @@ module Mittsu
       @state.disable_unused_attributes
 
       object.render_buffer(camera, lights, fog, material, geometry_group, buffers_need_update)
-
-      # TODO: render particles
-      # when PointCloud
-      #   glDrawArrays(GL_POINTS, 0, geometry_group.particle_count)
-      #
-      #   @info[:render][:calls] += 1
-      #   @info[:render][:points] += geometry_group.particle_count
     end
 
     def compressed_texture_formats
@@ -488,21 +482,6 @@ module Mittsu
       else
         object.update
       end
-      # TODO: when PointCloud exists
-      # elsif object.is_A? PointCloud
-      #   # TODO: glBindVertexArray ???
-      #   material = object.buffer_material(geometry)
-      #   custom_attributes_dirty = material.attributes && are_custom_attributes_dirty(material)
-      #
-      #   if geometry.vertices_need_update || geometry.colors_need_update || custom_attributes_dirty
-      #     set_particle_buffers(geometry, GL_DYNAMIC_DRAW, object)
-      #   end
-      #
-      #   geometry.vertices_need_update = false
-      #   geometry.colors_need_update = false
-      #
-      #   material.attributes && clear_custom_attributes(material)
-      # end
     end
 
     # FIXME: refactor
@@ -605,8 +584,6 @@ module Mittsu
         # when LineDashedMaterial
         #   refresh_uniforms_line(material_uniforms, material)
         #   refresh_uniforms_dash(material_uniforms, material)
-        # when PointCloudMaterial
-        #   refresh_uniforms_particle(material_uniforms, material)
         # when MeshDepthMaterial
         #   material_uniforms.m_near.value = camera.near
         #   material_uniforms.m_far.value = camera.far
@@ -806,8 +783,8 @@ module Mittsu
     end
 
     def sort_objects_for_render
-      @opaque_objects.sort { |a,b| OpenGLHelper.painter_sort_stable(a,b) }
-      @transparent_objects.sort { |a,b| OpenGLHelper.reverse_painter_sort_stable(a,b) }
+      @opaque_objects.sort! { |a,b| OpenGLHelper.painter_sort_stable(a,b) }
+      @transparent_objects.sort! { |a,b| OpenGLHelper.reverse_painter_sort_stable(a,b) }
     end
 
     def set_matrices_for_immediate_objects(camera)
@@ -863,8 +840,9 @@ module Mittsu
     end
 
     def render_custom_plugins_post_pass(scene, camera)
+      @sprite_plugin.render(scene, camera)
+
       # TODO: when these custom plugins are implemented
-      # @sprite_plugin.render(scene, camera)
       # lens_flare_plugin.render(scene, camera, @_current_render_target.width, @_current_render_target.height)
     end
 
@@ -912,6 +890,7 @@ module Mittsu
 
     def init_collections
       @lights = []
+      @sprites = []
 
       @_opengl_objects = {}
       @_opengl_objects_immediate = []
@@ -984,8 +963,9 @@ module Mittsu
     def init_plugins
       @shadow_map_plugin = ShadowMapPlugin.new(self, @lights, @_opengl_objects, @_opengl_objects_immediate)
 
+      @sprite_plugin = SpritePlugin.new(self, @sprites)
+
       # TODO: when these custom plugins are implemented
-      # @sprite_plugin = SpritePlugin.new(self, @sprites)
       # @lens_flare_plugin = LensFlarePlugin.new(self, @lens_flares)
     end
 

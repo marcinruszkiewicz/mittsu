@@ -1,3 +1,5 @@
+require "mittsu/jruby_shim"
+
 module Mittsu
   DEBUG = ENV["DEBUG"] == "true"
 

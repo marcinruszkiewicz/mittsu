@@ -66,6 +66,16 @@ module Mittsu
       init_plugins
     end
 
+    def grab_screenshot
+      data = [].fill(0, 0, @width * @height * 3)
+      data_ptr = Fiddle::Pointer[data.pack('I*')]
+      glPixelStorei(GL_PACK_ALIGNMENT, 1);
+      glReadBuffer(GL_FRONT)
+      glReadPixels(0, 0, @width, @height, GL_RGB, GL_UNSIGNED_BYTE, data_ptr)
+
+      data
+    end
+
     def supports_bone_textures?
       @_supports_bone_textures
     end
